@@ -44,10 +44,6 @@ public class SandSimulation extends ApplicationAdapter
 	Rectangle eraseButton;
 	Rectangle steelButton;
 
-
-
-
-
 	private OrthographicCamera orthographicCamera;
 	@Override
 	public void create ()
@@ -73,8 +69,8 @@ public class SandSimulation extends ApplicationAdapter
 				(int)(Gdx.graphics.getWidth()/10f),
 				(int)(Gdx.graphics.getWidth()/10f));
 
-		yBoxesNum = Gdx.graphics.getHeight()/6;
-		xBoxesNum = Gdx.graphics.getWidth()/6;
+		yBoxesNum = Gdx.graphics.getHeight()/2;
+		xBoxesNum = Gdx.graphics.getWidth()/2;
 		boxWidth = Gdx.graphics.getWidth()/(float)xBoxesNum;
 		boxHeight = Gdx.graphics.getHeight()/(float)yBoxesNum;
 		fps = new FPSLogger();
@@ -177,8 +173,8 @@ public class SandSimulation extends ApplicationAdapter
 		System.out.println(finish - start);
 
 		start = System.currentTimeMillis();
-		Gdx.gl.glClearColor(0.223f, 0.176f, 0.176f, 1f);
-		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+//		Gdx.gl.glClearColor(0.223f, 0.176f, 0.176f, 1f);
+//		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
 		batch.begin();
 		batch.draw(fbo.getColorBufferTexture(),
@@ -194,6 +190,9 @@ public class SandSimulation extends ApplicationAdapter
 		true);
 
 		batch.end();
+		finish = System.currentTimeMillis();
+		System.out.println("czas BATCH");
+		start = System.currentTimeMillis();
 		fbo.begin();
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
@@ -212,7 +211,7 @@ public class SandSimulation extends ApplicationAdapter
 		fbo.end();
 
 		finish = System.currentTimeMillis();
-		System.out.println("czas rysowania");
+		System.out.println("czas shaperenderer");
 		System.out.println(finish - start);
 		fps.log();
 	}
@@ -234,13 +233,14 @@ public class SandSimulation extends ApplicationAdapter
 		int touchX;
 		int touchY;
 		sideChanger *= -1;
+
 		if (Gdx.input.isTouched())
 		{
 			float boxWidth = Gdx.graphics.getWidth()/(float)xBoxesNum;
 			float boxHeight = Gdx.graphics.getHeight()/(float)yBoxesNum;
 			touchX = Gdx.input.getX();
 			touchY = Gdx.graphics.getHeight() - Gdx.input.getY();
-			int grainRad = (int)(Math.random() * 20);
+			int grainRad = (int)(Math.random() * 80);
 			for(int i=0; i<=50; i++)
 			{
 				int new_x = (int)((touchX-grainRad + (int)(Math.random() * ((grainRad + grainRad) + 1)))/boxWidth);
