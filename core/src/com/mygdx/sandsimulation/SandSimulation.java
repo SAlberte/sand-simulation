@@ -4,75 +4,34 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.FPSLogger;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
-
 import java.util.LinkedList;
-
 import myutils.MaterialBrushes;
+import myutils.MaterialButtons;
 import myutils.ParticleDrawInfo;
 import myutils.Materials;
 
 public class SandSimulation extends ApplicationAdapter
 {
 	private static final float SCALE = 2.0f;
-	public static final float PIXEL_PER_METER = 32f;
-	ShapeRenderer shapeRenderer;
-	int yBoxesNum;
-	int xBoxesNum;
-	float boxWidth;
-	float boxHeight;
-	Materials currentMaterial = Materials.SAND;
-	ParticleDrawInfo[][] worldGrid;
-	boolean [][] isWorldGridPartStationary;
-	int WorldGridPartsXPartsNum = 15;
-	int WorldGridPartsYPartsNum = 30;
-	int WorldGridPartsXPartLen;
-	int WorldGridPartsYPartLen;
-	int sideChanger = -1;
-	MaterialBrushes materialBrushes = new MaterialBrushes();
-	LinkedList<ParticleDrawInfo> particlesToDraw = new LinkedList<>();
-	FPSLogger fps;
-	FrameBuffer fbo;
-	SpriteBatch batch;
-	Rectangle sandButton;
-	Rectangle waterButton;
-	Rectangle eraseButton;
-	Rectangle steelButton;
+	private ShapeRenderer shapeRenderer;
+	private FrameBuffer fbo;
+	private SpriteBatch batch;
+	private MaterialButtons materialButtons;
+	private SandPit sandPit;
+
 
 	private OrthographicCamera orthographicCamera;
 	@Override
 	public void create ()
 	{
-		sandButton = new Rectangle(
-				(int)(0.1f*Gdx.graphics.getWidth()),
-				(int)(0.9f*Gdx.graphics.getHeight()),
-				(int)(Gdx.graphics.getWidth()/10f),
-				(int)(Gdx.graphics.getWidth()/10f));
-		waterButton = new Rectangle(
-				(int)(0.25f*Gdx.graphics.getWidth()),
-				(int)(0.9f*Gdx.graphics.getHeight()),
-				(int)(Gdx.graphics.getWidth()/10f),
-				(int)(Gdx.graphics.getWidth()/10f));
-		steelButton = new Rectangle(
-				(int)(0.4f*Gdx.graphics.getWidth()),
-				(int)(0.9f*Gdx.graphics.getHeight()),
-				(int)(Gdx.graphics.getWidth()/10f),
-				(int)(Gdx.graphics.getWidth()/10f));
-		eraseButton = new Rectangle(
-				(int)(0.55f*Gdx.graphics.getWidth()),
-				(int)(0.9f*Gdx.graphics.getHeight()),
-				(int)(Gdx.graphics.getWidth()/10f),
-				(int)(Gdx.graphics.getWidth()/10f));
-
-		autoAdjustWorldGrid();
-		fps = new FPSLogger();
 		shapeRenderer = new ShapeRenderer();
 		fbo = new FrameBuffer(
 				Pixmap.Format.RGBA8888,
@@ -86,7 +45,8 @@ public class SandSimulation extends ApplicationAdapter
 				false, Gdx.graphics.getWidth() / SCALE,
 				Gdx.graphics.getHeight() / SCALE);
 
-
+		materialButtons = new MaterialButtons();
+		sandPit = new SandPit(materialButtons.getTopUIEdge());
 		Gdx.input.setInputProcessor(
 				new InputAdapter()
 		{
@@ -95,14 +55,15 @@ public class SandSimulation extends ApplicationAdapter
 			{
 				float touchX = Gdx.input.getX();
 				float touchY = Gdx.graphics.getHeight() - Gdx.input.getY();
-				if (eraseButton.contains(touchX, touchY))
-					currentMaterial = Materials.AIR;
-				if (sandButton.contains(touchX, touchY))
-					currentMaterial = Materials.SAND;
-				if (waterButton.contains(touchX, touchY))
-					currentMaterial = Materials.WATER;
-				if (steelButton.contains(touchX, touchY))
-					currentMaterial = Materials.STEEL;
+
+				if (materialButtons.contains(Materials.AIR, touchX, touchY))
+					sandPit.currentMaterial = Materials.AIR;
+				if (materialButtons.contains(Materials.SAND, touchX, touchY))
+					sandPit.currentMaterial = Materials.SAND;
+				if (materialButtons.contains(Materials.WATER, touchX, touchY))
+					sandPit.currentMaterial = Materials.WATER;
+				if (materialButtons.contains(Materials.STEEL, touchX, touchY))
+					sandPit.currentMaterial = Materials.STEEL;
 				return true;
 			}
 			});
@@ -110,88 +71,37 @@ public class SandSimulation extends ApplicationAdapter
 			Gdx.gl.glClearColor(0.223f, 0.176f, 0.176f, 1f);
 			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 			fbo.begin();
-					shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-					shapeRenderer.setColor(Color.YELLOW);
-					shapeRenderer.box(
-							sandButton.x,
-							sandButton.y,
-							0,
-							sandButton.width,
-							sandButton.height,
-							0
-					);
-					shapeRenderer.setColor(Color.BLUE);
-					shapeRenderer.box(
-							waterButton.x,
-							waterButton.y,
-							0,
-							waterButton.width,
-							waterButton.height,
-							0
-					);
-					shapeRenderer.setColor(Color.LIGHT_GRAY);
-					shapeRenderer.box(
-					steelButton.x,
-					steelButton.y,
-					0,
-					steelButton.width,
-					steelButton.height,
-					0
-					);
-					shapeRenderer.setColor(Color.RED);
-					shapeRenderer.box(
-							eraseButton.x,
-							eraseButton.y,
-							0,
-							eraseButton.width,
-							eraseButton.height,
-							0
-					);
-					shapeRenderer.end();
+			shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+			drawMaterialButton(Materials.AIR);
+			drawMaterialButton(Materials.SAND);
+			drawMaterialButton(Materials.WATER);
+			drawMaterialButton(Materials.STEEL);
+			drawMaterialButton(Materials.SAND);
+
+			shapeRenderer.end();
 			fbo.end();
-
 	}
 
-	private void autoAdjustWorldGrid()
+	private void drawMaterialButton(Materials material)
 	{
-		yBoxesNum = Gdx.graphics.getHeight()/4;
-		xBoxesNum = Gdx.graphics.getWidth()/4;
-		xBoxesNum = (xBoxesNum/WorldGridPartsXPartsNum)*WorldGridPartsXPartsNum;
-		yBoxesNum = (yBoxesNum/WorldGridPartsYPartsNum)*WorldGridPartsYPartsNum;
-		boxWidth = Gdx.graphics.getWidth()/(float)xBoxesNum;
-		boxHeight = Gdx.graphics.getHeight()/(float)yBoxesNum;
-		worldGrid = new ParticleDrawInfo[xBoxesNum][yBoxesNum];
-		for(int y=0; y<yBoxesNum; y++)
-			for(int x=0;x< xBoxesNum; x++)
-			{
-				worldGrid[x][y] = new ParticleDrawInfo(
-						x,
-						y,
-						Materials.AIR,
-						new Color(0.223f, 0.176f, 0.176f, 1));
-			}
-		isWorldGridPartStationary = new boolean[WorldGridPartsXPartsNum][WorldGridPartsYPartsNum];
-		WorldGridPartsXPartLen = xBoxesNum / WorldGridPartsXPartsNum;
-		WorldGridPartsYPartLen = yBoxesNum / WorldGridPartsYPartsNum;
-		for(int y=0; y<WorldGridPartsYPartsNum; y++)
-			for(int x=0;x< WorldGridPartsXPartsNum; x++)
-			{
-				isWorldGridPartStationary[x][y] = true;
-			}
+		shapeRenderer.setColor(materialButtons.getButtonColor(material));
+		float[] posAndDims = materialButtons.getPosAndDims(material);
+		shapeRenderer.rect(
+				posAndDims[0],
+				posAndDims[1],
+				posAndDims[2],
+				posAndDims[3]
+				);
 	}
+
 
 	@Override
 	public void render ()
 	{
-
-		long start = System.currentTimeMillis();
 		for(int i=0;i<2;i++)
-			updateWorld();
-		long finish = System.currentTimeMillis();
-		System.out.println("Update Time");
-		System.out.println(finish - start);
+			sandPit.update();
 
-		start = System.currentTimeMillis();
 		Gdx.gl.glClearColor(0.223f, 0.176f, 0.176f, 1f);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
@@ -213,23 +123,19 @@ public class SandSimulation extends ApplicationAdapter
 		fbo.begin();
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-		for(ParticleDrawInfo particle : particlesToDraw)
+		for(ParticleDrawInfo particle : sandPit.particlesToDraw)
 		{
 			shapeRenderer.setColor(particle.color);
 			shapeRenderer.rect(
-						particle.x * boxWidth,
-				     	particle.y * boxHeight,
-						boxWidth, boxHeight);
+						particle.x * sandPit.boxWidth,
+				     	particle.y * sandPit.boxHeight,
+						sandPit.boxWidth,
+						sandPit.boxHeight);
 
 		}
-		particlesToDraw.clear();
+		sandPit.particlesToDraw.clear();
 		shapeRenderer.end();
 		fbo.end();
-
-		finish = System.currentTimeMillis();
-		System.out.println("czas shaperenderer");
-		System.out.println(finish - start);
-		fps.log();
 	}
 	@Override
 	public void resize(int width, int height)
@@ -246,272 +152,5 @@ public class SandSimulation extends ApplicationAdapter
 
 		shapeRenderer.dispose();
 	}
-	private void addNewMaterials()
-	{
-		int touchX;
-		int touchY;
-		if (Gdx.input.isTouched()) {
-			float boxWidth = Gdx.graphics.getWidth() / (float) xBoxesNum;
-			float boxHeight = Gdx.graphics.getHeight() / (float) yBoxesNum;
-			touchX = Gdx.input.getX();
-			touchY = Gdx.graphics.getHeight() - Gdx.input.getY();
-			int grainRad = materialBrushes.getBrushRadius(currentMaterial);
-			int pointsNum = materialBrushes.getBrushPoints(currentMaterial);
-			for (int i = 0; i <= pointsNum; i++) {
-				int new_x = (int) ((touchX - grainRad + (int) (Math.random() * ((grainRad + grainRad) + 1))) / boxWidth);
-				int new_y = (int) ((touchY - grainRad + (int) (Math.random() * ((grainRad + grainRad) + 1))) / boxHeight);
-				if (new_x >= 0 && new_x < xBoxesNum && new_y >= 0 && new_y * boxHeight < sandButton.y - sandButton.height)
-				{
-					Color new_color = generateNewColor(currentMaterial);
-					worldGrid[new_x][new_y] = new ParticleDrawInfo(
-							new_x,
-							new_y,
-							currentMaterial,
-							new_color);
-					addParticleToDrawList(new_x, new_y);
-				}
-			}
-		}
-	}
 
-	private void updateWorld()
-	{
-		addNewMaterials();
-		sideChanger *= -1;
-		if(sideChanger < 0)
-		{
-			for(int yPart=0;yPart<WorldGridPartsYPartsNum;yPart++)
-			{
-				int yStart = WorldGridPartsYPartLen * yPart;
-				int yEnd = yStart + WorldGridPartsYPartLen;
-				LinkedList <Integer> xPartsToUpdate = new LinkedList<>();
-				for(int i=0;i<WorldGridPartsXPartsNum;i++)
-				{
-					if(!isWorldGridPartStationary[i][yPart])
-					{
-						xPartsToUpdate.add(i);
-						isWorldGridPartStationary[i][yPart]= true;
-					}
-				}
-				for(int yStartIter=yStart; yStartIter<yEnd;yStartIter++)
-				{
-					for(Integer x : xPartsToUpdate)
-					{
-						int xStart = WorldGridPartsXPartLen * x;
-						int xEnd = xStart + WorldGridPartsXPartLen;
-						updateWorldGridFromLeftToRight(xStart, xEnd, yStartIter);
-					}
-				}
-			}
-		}
-		else
-		{
-			for(int yPart=0;yPart<WorldGridPartsYPartsNum;yPart++)
-			{
-				int yStart = WorldGridPartsYPartLen * yPart;
-				int yEnd = yStart + WorldGridPartsYPartLen;
-				LinkedList <Integer> xPartsToUpdate = new LinkedList<>();
-				for(int i=WorldGridPartsXPartsNum-1;i>=0;i--)
-				{
-					if(!isWorldGridPartStationary[i][yPart])
-					{
-						xPartsToUpdate.add(i);
-						isWorldGridPartStationary[i][yPart]= true;
-					}
-				}
-				for(int yStartIter=yStart; yStartIter<yEnd;yStartIter++)
-				{
-
-					for(Integer x : xPartsToUpdate)
-					{
-						int xStart = WorldGridPartsXPartLen * x;
-						int xEnd = xStart + WorldGridPartsXPartLen;
-						updateWorldGridFromRightToLeft(xStart, xEnd, yStartIter);
-					}
-				}
-			}
-		}
-	}
-	private void updateWorldGridFromLeftToRight(
-			int xStart,
-			int xEnd,
-			int y)
-	{
-			for(int x=xStart;x< xEnd; x++)
-				updateWorldGrid(x, y);
-	}
-	private void updateWorldGridFromRightToLeft(
-			int xStart,
-			int xEnd,
-			int y)
-	{
-			for(int x=xEnd-1;x>=xStart; x--)
-				updateWorldGrid(x, y);
-	}
-
-	private void updateWorldGrid(int x, int y)
-	{
-		switch(worldGrid[x][y].material)
-		{
-			case SAND:
-				updateSand(x, y);
-				break;
-			case WATER:
-				updateWater(x, y);
-				break;
-			default: break;
-		}
-	}
-
-	private void updateSand(int x, int y)
-	{
-		if(y-1 >=0)
-		{
-			if(worldGrid[x][y-1].material == Materials.AIR)
-			{
-				swapGridValues(x, y, x, y-1);
-			}
-			else if(worldGrid[x][y-1].material == Materials.WATER)
-			{
-				if (Math.random()> 0.7f)
-					swapGridValues(x, y, x, y-1);
-			}
-			else if(x-1 >= 0 && worldGrid[x-1][y-1].material != Materials.SAND && worldGrid[x-1][y-1].material != Materials.STEEL)
-			{
-				swapGridValues(x, y, x-1, y-1);
-			}
-			else if(x+1 < xBoxesNum && worldGrid[x+1][y-1].material != Materials.SAND && worldGrid[x+1][y-1].material != Materials.STEEL)
-			{
-				swapGridValues(x, y, x+1, y-1);
-			}
-		}
-	}
-
-	private void updateWater(int x, int y)
-	{
-		if(y-1 >=0)
-		{
-			if (worldGrid[x][y - 1].material == Materials.AIR)
-				swapGridValues(x, y, x, y - 1);
-
-			else if (isWaterRightDownMove(x, y))
-				moveWaterRightDown(x, y);
-
-			else if (isWaterLeftDownMove(x, y))
-				moveWaterLeftDown(x, y);
-
-			else if (isWaterRightMove(x, y))
-				moveWaterRight(x, y);
-
-			else if (isWaterLeftMove(x, y))
-				moveWaterLeft(x, y);
-		}
-
-	}
-
-	private boolean isWaterLeftDownMove(int x, int y)
-	{
-		return x-1 >= 0 && worldGrid[x - 1][y - 1].material == Materials.AIR;
-	}
-
-	private boolean isWaterRightDownMove(int x, int y)
-	{
-		return x+1 < xBoxesNum && worldGrid[x+1][y-1].material == Materials.AIR;
-	}
-
-	private boolean isWaterRightMove(int x, int y)
-	{
-		return x+1 < xBoxesNum && worldGrid[x+1][y].material == Materials.AIR && worldGrid[x+1][y-1].material != Materials.AIR;
-	}
-
-	private boolean isWaterLeftMove(int x, int y)
-	{
-		return x-1 >= 0 && worldGrid[x-1][y].material == Materials.AIR && worldGrid[x-1][y-1].material != Materials.AIR;
-	}
-	private void moveWaterLeftDown(int x, int y)
-	{
-
-		swapGridValues(x, y, x-1, y-1);
-	}
-
-	private void moveWaterRightDown(int x, int y)
-	{
-
-		swapGridValues(x, y, x+1, y-1);
-	}
-
-	private void moveWaterRight(int x, int y)
-	{
-
-		swapGridValues(x, y, x+1, y);
-	}
-
-	private void moveWaterLeft(int x, int y)
-	{
-		swapGridValues(x, y, x-1, y);
-	}
-
-	private void swapGridValues(int x, int y, int i, int j)
-	{
-		Materials element_buff = worldGrid[x][y].material;
-		Color color_buff = worldGrid[x][y].color;
-
-		worldGrid[x][y].material = worldGrid[i][j].material;
-		worldGrid[x][y].color = worldGrid[i][j].color;
-		worldGrid[i][j].material = element_buff;
-		worldGrid[i][j].color = color_buff;
-		addParticleToDrawList(x, y);
-		addParticleToDrawList(i, j);
-	}
-
-	private Color generateNewColor(Materials currentMaterial)
-	{
-		switch(currentMaterial)
-		{
-			case AIR:
-				return new Color(0.223f, 0.176f, 0.176f, 1);
-			case SAND:
-				return new Color(0949f+(float)(Math.random()/10-0.05f), 0.899f+(float)(Math.random()/5-0.1f), 0.184f+(float)(Math.random()/5-0.1f), 1);
-			case WATER:
-				return new Color(0.2f+(float)(Math.random()/5-0.1f), 0.635f+(float)(Math.random()/5-0.1f), 0.858f+(float)(Math.random()/5-0.1f), 1);
-			case STEEL:
-				return Color.LIGHT_GRAY;
-		}
-		return new Color(0.223f, 0.176f, 0.176f, 1);
-	}
-
-	private void addParticleToDrawList(int x, int y)
-	{
-		particlesToDraw.add(worldGrid[x][y]);
-		updateIsWorldGridPartStationary(x, y);
-	}
-
-	private void updateIsWorldGridPartStationary(int x, int y)
-	{
-
-		int xPart = x / WorldGridPartsXPartLen;
-		int yPart = y / WorldGridPartsYPartLen;
-
-		isWorldGridPartStationary[xPart][yPart] = false;
-		if(xPart > 0)
-		{
-			isWorldGridPartStationary[xPart-1][yPart] = false;
-			if(yPart > 0)
-				isWorldGridPartStationary[xPart-1][yPart-1] = false;
-			if(yPart < WorldGridPartsYPartsNum-1)
-				isWorldGridPartStationary[xPart-1][yPart+1] = false;
-		}
-		if(xPart < WorldGridPartsXPartsNum-1)
-		{
-			isWorldGridPartStationary[xPart+1][yPart] = false;
-			if(yPart < WorldGridPartsYPartsNum-1)
-				isWorldGridPartStationary[xPart+1][yPart+1] = false;
-			if(yPart > 0)
-				isWorldGridPartStationary[xPart+1][yPart-1] = false;
-		}
-		if(yPart < WorldGridPartsYPartsNum-1)
-			isWorldGridPartStationary[xPart][yPart+1] = false;
-		if(yPart > 0)
-			isWorldGridPartStationary[xPart][yPart-1] = false;
-	}
 }
