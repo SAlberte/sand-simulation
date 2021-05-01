@@ -7,14 +7,14 @@ public class ParticleDrawInfo
 {
     public int x;
     public int y;
-    public int element;
+    public Materials material;
     public Color color;
 
-    public ParticleDrawInfo(int x, int y, int element, Color color)
+    public ParticleDrawInfo(int x, int y, Materials material, Color color)
     {
         this.x = x;
         this.y = y;
-        this.element = element;
+        this.material = material;
         this.color = color;
     }
 
