@@ -32,6 +32,7 @@ public class SandSimulation extends ApplicationAdapter
 
 
 	private OrthographicCamera orthographicCamera;
+
 	@Override
 	public void create ()
 	{
@@ -193,7 +194,6 @@ public class SandSimulation extends ApplicationAdapter
 	public void dispose()
 	{
 		fbo.dispose();
-
 		shapeRenderer.dispose();
 	}
 
