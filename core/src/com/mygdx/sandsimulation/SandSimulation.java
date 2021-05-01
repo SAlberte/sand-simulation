@@ -13,6 +13,8 @@ import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import java.util.LinkedList;
+
+import myutils.Button;
 import myutils.MaterialBrushes;
 import myutils.MaterialButtons;
 import myutils.ParticleDrawInfo;
@@ -25,6 +27,7 @@ public class SandSimulation extends ApplicationAdapter
 	private FrameBuffer fbo;
 	private SpriteBatch batch;
 	private MaterialButtons materialButtons;
+	private Button eraseButton;
 	private SandPit sandPit;
 
 
@@ -46,6 +49,13 @@ public class SandSimulation extends ApplicationAdapter
 				Gdx.graphics.getHeight() / SCALE);
 
 		materialButtons = new MaterialButtons();
+		eraseButton = new Button(
+				(int)(0.85f* Gdx.graphics.getWidth()),
+				(int)(0.9f*Gdx.graphics.getHeight()),
+				(int)(Gdx.graphics.getWidth()/10f),
+				(int)(Gdx.graphics.getWidth()/10f),
+				Color.RED);
+
 		sandPit = new SandPit(materialButtons.getTopUIEdge());
 		Gdx.input.setInputProcessor(
 				new InputAdapter()
@@ -64,23 +74,57 @@ public class SandSimulation extends ApplicationAdapter
 					sandPit.currentMaterial = Materials.WATER;
 				if (materialButtons.contains(Materials.STEEL, touchX, touchY))
 					sandPit.currentMaterial = Materials.STEEL;
+				if (eraseButton.contains(touchX, touchY))
+				{
+					sandPit.reset();
+					drawInitialUI();
+				}
 				return true;
 			}
 			});
+		drawInitialUI();
 
-			Gdx.gl.glClearColor(0.223f, 0.176f, 0.176f, 1f);
-			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-			fbo.begin();
-			shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+	}
+	private void clearScreen()
+	{
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+		shapeRenderer.setColor(0.223f, 0.176f, 0.176f, 1f);
+		shapeRenderer.rect(
+				0,
+				0,
+				Gdx.graphics.getWidth(),
+				Gdx.graphics.getHeight());
 
-			drawMaterialButton(Materials.AIR);
-			drawMaterialButton(Materials.SAND);
-			drawMaterialButton(Materials.WATER);
-			drawMaterialButton(Materials.STEEL);
-			drawMaterialButton(Materials.SAND);
+		shapeRenderer.end();
+	}
 
-			shapeRenderer.end();
-			fbo.end();
+	private void drawInitialUI()
+	{
+		Gdx.gl.glClearColor(0.223f, 0.176f, 0.176f, 1f);
+		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+		fbo.begin();
+		clearScreen();
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+		drawMaterialButton(Materials.AIR);
+		drawMaterialButton(Materials.SAND);
+		drawMaterialButton(Materials.WATER);
+		drawMaterialButton(Materials.STEEL);
+		drawButton(eraseButton);
+
+		shapeRenderer.end();
+		fbo.end();
+	}
+
+	private void drawButton(Button button)
+	{
+		shapeRenderer.setColor(button.getColor());
+		shapeRenderer.rect(
+				button.getX(),
+				button.getY(),
+				button.getWidth(),
+				button.getHeight()
+		);
 	}
 
 	private void drawMaterialButton(Materials material)

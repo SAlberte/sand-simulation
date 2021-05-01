@@ -42,6 +42,14 @@ public class SandPit
         boxWidth = Gdx.graphics.getWidth()/(float)xBoxesNum;
         boxHeight = Gdx.graphics.getHeight()/(float)yBoxesNum;
         worldGrid = new ParticleDrawInfo[xBoxesNum][yBoxesNum];
+        isWorldGridPartStationary = new boolean[WorldGridPartsXPartsNum][WorldGridPartsYPartsNum];
+        WorldGridPartsXPartLen = xBoxesNum / WorldGridPartsXPartsNum;
+        WorldGridPartsYPartLen = yBoxesNum / WorldGridPartsYPartsNum;
+        setInitialWorldValues();
+    }
+
+    private void setInitialWorldValues()
+    {
         for(int y=0; y<yBoxesNum; y++)
             for(int x=0;x< xBoxesNum; x++)
             {
@@ -51,15 +59,14 @@ public class SandPit
                         Materials.AIR,
                         new Color(0.223f, 0.176f, 0.176f, 1));
             }
-        isWorldGridPartStationary = new boolean[WorldGridPartsXPartsNum][WorldGridPartsYPartsNum];
-        WorldGridPartsXPartLen = xBoxesNum / WorldGridPartsXPartsNum;
-        WorldGridPartsYPartLen = yBoxesNum / WorldGridPartsYPartsNum;
+
         for(int y=0; y<WorldGridPartsYPartsNum; y++)
             for(int x=0;x< WorldGridPartsXPartsNum; x++)
             {
                 isWorldGridPartStationary[x][y] = true;
             }
     }
+
 
     private void addNewMaterials()
     {
@@ -88,7 +95,10 @@ public class SandPit
             }
         }
     }
-
+    public void reset()
+    {
+        setInitialWorldValues();
+    }
     public void update()
     {
         addNewMaterials();
